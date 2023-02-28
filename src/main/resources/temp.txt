@@ -1,0 +1,42 @@
+def regions=['cn-hangzhou', 'cn-zhangjiakou', 'cn-shanghai', 'cn-beijing', 'cn-shenzhen', 'cn-hongkong', 'ap-southeast-1', 'eu-central-1']
+def vvpImageSpecies=['vvp-appmanager', 'vvp-gateway', 'vvp-artifact-fetcher']
+def vvrImageSpecies=['flink']
+pipeline {
+    agent any
+    stages {
+        stage('synchronize'){
+            steps{
+                script {
+                    pull_vvp_image("${vvp_image_tag}", vvpImageSpecies, regions)
+                    pull_vvr_image("${vvr_image_tag}", vvrImageSpecies, regions)
+                    wget_vvr_dist("${vvr_version_name}", regions)
+                }
+            }
+        }
+    }
+}
+
+def pull_vvp_image(vvp_image_tag, imageSpecies, allRegion) {
+    for(region in allRegion){
+        for(specie in imageSpecies){
+            sh "docker pull registry.${region}.aliyuncs.com/vvp-prod/${specie}:${vvp_image_tag}"
+        }
+    }
+}
+
+def pull_vvr_image(vvp_image_tag, imageSpecies, allRegion) {
+    for(region in allRegion){
+        for(specie in imageSpecies){
+            sh "docker pull registry.${region}.aliyuncs.com/vvp-prod/${specie}:${vvr_image_tag}"
+        }
+    }
+}
+
+def wget_vvr_dist(vvr_version_name_string, allRegion){
+    def vvr_version_name_array = vvr_version_name_string.split(" ")
+    for(region in allRegion){
+        for (vvr_version_name in vvr_version_name_array){
+            sh "wget https://prod-vvp-sql-${region}.oss-${region}.aliyuncs.com/packaged-vvr-dist/${vvr_version_name}/${vvr_version_name}-dist.tar.gz"
+        }
+    }
+}
